@@ -1,3 +1,6 @@
+*.cfg
+*/*
+
 # Documents
 *.xls*
 *.csv
