@@ -48,17 +48,18 @@ class DCGAN():
         C = config.Config()
         proj = layers.Input(C.proj_dims)
         x = layers.Reshape((C.proj_dims[0],-1))(proj)
-        x = layers.Dense(1024, activation='tanh')(x)
+        x = layers.Dense(1024, activation='relu')(x)
         x = layers.BatchNormalization()(x)
-        x = layers.Dense(1024, activation='tanh')(x)
+        x = layers.Dense(1024, activation='relu')(x)
         x = layers.BatchNormalization()(x)
-        x = layers.Reshape((C.proj_dims[0],16,16,-1))(x)
-        x = layers.Conv3D(128, 3, activation='relu', padding='same')(x)
-        x = layers.UpSampling3D((1,2,2))(x)
+        x = layers.Reshape((C.proj_dims[0],32,32,-1))(x)
+        x = layers.MaxPooling3D((2,1,1))(x)
+        x = layers.Conv3D(64, 3, activation='relu', padding='same')(x)
+        #x = layers.UpSampling3D((1,2,2))(x)
         x = layers.Conv3D(64, 3, activation='relu', padding='same')(x)
         #x = layers.Dropout(.25)(x)
         x = layers.BatchNormalization(momentum=0.8)(x)
-        x = layers.Conv3DTranspose(1, 5, strides=(1,2,2), activation='sigmoid', padding='same')(x)
+        x = layers.Conv3DTranspose(1, 3, activation='sigmoid', padding='same')(x)
         img = layers.Reshape(C.world_dims)(x)
         model = Model(proj, img)
         model.summary()
@@ -69,8 +70,8 @@ class DCGAN():
         C = config.Config()
         d_input = Input(C.world_dims)
         y = layers.Reshape((*C.world_dims,1))(d_input)
-        y = layers.Conv3D(64, 5, strides=2, activation='relu')(y)
-        y = layers.Conv3D(64, 5, strides=2, activation='relu', padding='same')(y)
+        y = layers.Conv3D(64, 3, strides=1, activation='relu')(y)
+        y = layers.Conv3D(64, 3, strides=2, activation='relu', padding='same')(y)
         y = layers.BatchNormalization()(y)
         y = layers.Conv3D(64, 3, strides=2, activation='relu', padding='same')(y)
         y = layers.Flatten()(y)
@@ -88,7 +89,7 @@ class DCGAN():
         for epoch in range(epochs):
             X_train, Y_train = next(gen)
 
-            if epoch % 5 == 0:
+            if epoch % 2 == 0:
                 # ---------------------
                 #  Train Discriminator
                 # ---------------------
@@ -105,10 +106,9 @@ class DCGAN():
             #  Train Generator
             # ---------------------
             # Train the generator (wants discriminator to mistake images as real)
-            if epoch % 10 == 0:
-                g_loss = self.generator.train_on_batch(X_train, Y_train)
-            else:
-                g_loss = 0
+            g_loss = self.generator.train_on_batch(X_train, Y_train)
+            if np.isnan(g_loss):
+                raise ValueError()
             c_loss = self.combined.train_on_batch(X_train, np.ones((batch_size, 1)))
 
             # Plot the progress
@@ -126,7 +126,7 @@ class DCGAN():
         cnt = 0
         for i in range(r):
             for j in range(c):
-                axs[i,j].imshow(gen_imgs[cnt,:,:,32], cmap='gray')
+                axs[i,j].imshow(gen_imgs[cnt,:,:,16], cmap='gray')
                 axs[i,j].axis('off')
                 cnt += 1
         fig.savefig(r"D:\CBCT\GAN results\mnist_%d.png" % epoch)

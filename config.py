@@ -5,7 +5,7 @@ Author: Clinton Wang, E-mail: `clintonjwang@gmail.com`, Github: `https://github.
 class Config:
 	def __init__(self):
 		self.proj_dims = [64,64,32]
-		self.world_dims = [64,64,64]
+		self.world_dims = [32,32,32]
 		#self.aug_factor = 100
 
 		self.npy_dir = r"D:\CBCT\Train\NPYs"

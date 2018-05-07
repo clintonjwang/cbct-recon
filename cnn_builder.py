@@ -50,25 +50,20 @@ def build_cnn(optimizer='adam', lr=0.00002):
 	proj = layers.Input(C.proj_dims)
 	#x = layers.Permute((2,1,3))(img)
 	x = layers.Reshape((C.proj_dims[0],-1))(proj)
-	x = layers.Dense(1024, kernel_regularizer=regularizers.l1(0.01))(x)
-	#x = layers.BatchNormalization()(x)
-	#x = layers.Dense(1024, use_bias=False, kernel_regularizer=regularizers.l1(0.01))(x)
-	#x = layers.BatchNormalization()(x)
-	x = layers.Reshape((C.proj_dims[0],16,16,-1))(x)
-	x = layers.Conv3D(64, (3,3,3), padding='same', activation='relu')(x)
-	x = layers.UpSampling3D((1,2,2))(x)
-	x = layers.Conv3D(64, (3,3,3), padding='same', activation='relu')(x)
+	x = layers.Dense(1024, activation='tanh')(x) #, kernel_regularizer=regularizers.l1(0.01)
 	x = layers.BatchNormalization()(x)
-	x = layers.Conv3DTranspose(1, (3,3,3), strides=(1,2,2), activation='sigmoid', padding='same')(x)
-	#x = layers.Conv3DTranspose(64, (3,7,7), activation='relu', padding='same')(x)
-	#x = layers.Conv3D(128, (3,3,3), activation='relu', padding='same')(x)
-	#x = layers.BatchNormalization()(x)
+	#x = layers.Reshape((C.proj_dims[0],32,-1))(x)
+	#x = layers.Conv2D(128, 3, activation='relu', padding='same')(x)
+	#x = layers.Reshape((C.proj_dims[0],-1))(x)
+	x = layers.Dense(1024, activation='tanh')(x)
+	x = layers.BatchNormalization()(x)
+	x = layers.Reshape((C.proj_dims[0],32,32,-1))(x)
+	x = layers.Conv3D(64, 3, activation='relu', padding='same')(x)
 	#x = layers.UpSampling3D((1,2,2))(x)
-	#x = layers.Conv3D(128, (3,3,3), activation='relu', padding='same')(x)
-	#x = layers.Conv3DTranspose(64, (3,3,3), strides=(1,2,2), activation='relu', padding='same')(x)
-	#x = layers.Conv3DTranspose(64, (3,3,3), strides=(1,2,2), activation='relu', padding='same')(x)
-	#x = layers.BatchNormalization()(x)
-	#x = layers.Dense(1, activation='sigmoid')(x)
+	x = layers.MaxPooling3D((2,1,1))(x)
+	x = layers.Conv3D(64, 3, activation='relu', padding='same')(x)
+	x = layers.BatchNormalization()(x)
+	x = layers.Conv3DTranspose(1, 3, activation='sigmoid', padding='same')(x)
 	img = layers.Reshape(C.world_dims)(x)
 	#x = layers.Lambda(norm)(x)
 	#x = layers.Permute((2,1,3))(x)
@@ -78,23 +73,18 @@ def build_cnn(optimizer='adam', lr=0.00002):
 	model = Model(proj, img)
 	model.compile(optimizer=RMSprop(lr=lr, decay=0.1), loss='mse')
 
-	GAN = False
-	if GAN:
-		d_input = Input(C.world_dims)
-		y = layers.Conv3D(64, (3,3,3), activation='relu')(d_input)
-		y = layers.BatchNormalization()(y)
-		y = layers.Conv3D(64, (3,3,3), activation='relu')(y)
-		y = layers.Conv3D(64, (3,3,3), activation='relu')(y)
-		y = layers.BatchNormalization()(y)
-		y = layers.Flatten()(y)
-		y = layers.Dense(64, activation='relu')(y)
-		y = layers.BatchNormalization()(y)
-		discrim = layers.Dense(2, activation='softmax')(y)
-
-		gan_model = Model(d_input, discrim)
-		gan_model.compile(loss='categorical_crossentropy', optimizer='RMSprop')
-
-		return model, gan_model
+	if False:
+		x = layers.Reshape((C.proj_dims[0],-1))(proj)
+		x = layers.Dense(1024, activation='tanh')(x)
+		x = layers.BatchNormalization()(x)
+		x = layers.Dense(1024, activation='tanh')(x)
+		x = layers.BatchNormalization()(x)
+		x = layers.Reshape((C.proj_dims[0],32,32,-1))(x)
+		x = layers.Conv3D(64, (3,3,3), activation='relu', padding='same')(x)
+		x = layers.UpSampling3D((1,2,2))(x)
+		x = layers.Conv3D(64, (3,3,3), activation='relu', padding='same')(x)
+		x = layers.BatchNormalization()(x)
+		x = layers.Conv3DTranspose(1, (1,3,3), activation='sigmoid', padding='same')(x)
 
 	return model
 
@@ -133,7 +123,7 @@ def train_for_n(nb_epoch=5000, plt_frq=25,BATCH_SIZE=32):
 ### Training Submodules
 ####################################
 
-def train_generator(n=3):
+def train_generator(n=8):
 	C = config.Config()
 
 	fns = glob.glob(r"D:\CBCT\Train\NPYs\*_img.npy")
@@ -144,6 +134,6 @@ def train_generator(n=3):
 
 		for ix, lesion_id in enumerate(lesion_ids):
 			X_train[ix] = np.load(lesion_id.replace("_img", "_proj"))
-			Y_train[ix] = np.load(lesion_id)
+			Y_train[ix] = tr.rescale_img(np.load(lesion_id), C.world_dims)
 
 		yield X_train, Y_train
