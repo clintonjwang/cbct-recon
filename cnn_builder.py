@@ -119,6 +119,8 @@ def train_for_n(nb_epoch=5000, plt_frq=25,BATCH_SIZE=32):
 		if e%plt_frq==plt_frq-1:
 			plot_loss(losses)
 			plot_gen()
+
+
 ####################################
 ### Training Submodules
 ####################################
